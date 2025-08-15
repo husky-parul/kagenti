@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: jwt-svid-demo
+  namespace: spire-demo
+  labels:
+    app: jwt-demo
+spec:
+  serviceAccountName: jwt-demo-sa
+  restartPolicy: Never
+  containers:
+    - name: fetcher
+      image: ghcr.io/spiffe/spire-agent:1.8.7
+      command:
+        - /opt/spire/bin/spire-agent
+      args:
+        - api
+        - fetch
+        - jwt
+        - -audience
+        - keycloak-aud
+        - -socketPath
+        - /spiffe-workload-api/spire-agent.sock
+        - -spiffeID
+        - spiffe://example.org/ns/spire-demo/sa/jwt-demo-sa
+      volumeMounts:
+        - name: spiffe-workload-api
+          mountPath: /spiffe-workload-api
+  volumes:
+    - name: spiffe-workload-api
+      hostPath:
+        path: /run/spire/agent-sockets
+        type: DirectoryOrCreate

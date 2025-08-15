@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+local-deployments/spire-jwks.json
+
 # C extensions
 *.so
 
