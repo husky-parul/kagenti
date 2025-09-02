@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: null
+  name: agent
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: agents-sa
+  namespace: agent
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-a-config
+  namespace: agent
+data:
+  SPIFFE_ID_AGENT_A: "spiffe://192.168.2.4.nip.io/ns/agent/sa/default"
+  KEYCLOAK_URL: "http://keycloak-service.keycloak.svc.cluster.local:8080/realms/Demo/protocol/openid-connect/token"
+  WEATHER_TOOL_URL: "http://weather-tool.api.svc.cluster.local:5000/weather"
+  SPIRE_SOCKET: "unix:///spiffe-workload-api/spire-agent.sock"
+  JWT_SVID_FILE: "/opt/jwt_svid.token"
