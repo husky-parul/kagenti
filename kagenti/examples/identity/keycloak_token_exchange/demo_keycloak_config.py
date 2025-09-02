@@ -1,7 +1,7 @@
 import os
 from keycloak_wrapper import create_keycloak_client, create_keycloak_client_scope, get_keycloak_access_token
 
-base_url = "http://localhost:8080"
+base_url = "http://localhost:8081"
 admin_username = "admin"
 admin_password = "admin"
 realm = "Demo"
@@ -27,9 +27,11 @@ if JWKS_URL is None:
 REALM_MANAGEMENT = "realm-management"
 
 access_token = get_keycloak_access_token(base_url, admin_username, admin_password)
+print("Acccess Token", access_token)
 
 if len(access_token) > 0:
     # Create client scopes
+    print("Create client scopes")
     client_scopes = [
         {
             "name": "agent-audience",

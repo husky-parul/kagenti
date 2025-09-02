@@ -9,6 +9,7 @@ metadata:
   name: keycloak-http
   namespace: keycloak
 spec:
+  ingressClassName: nginx
   rules:
   - host: keycloak.$APP_DOMAIN
     http:

@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-a
+  namespace: agent
+  labels:
+    app: agent-a
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-a
+  template:
+    metadata:
+      labels:
+        app: agent-a
+    spec:
+      serviceAccountName: agents-sa
+      containers:
+      - name: agent-a
+        image: local/agent-a:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - configMapRef:
+            name: agent-a-config
+        volumeMounts:
+        - name: spiffe-workload-api
+          mountPath: /spiffe-workload-api
+          readOnly: true
+      volumes:
+      - name: spiffe-workload-api
+        csi:
+          driver: "csi.spiffe.io"
+          readOnly: true
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agent-a
+  namespace: agent
+spec:
+  selector:
+    app: agent-a
+  ports:
+  - port: 8000
+    targetPort: 8000
