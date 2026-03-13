@@ -1,0 +1,108 @@
+# Kagenti dev installation configuration
+
+
+####################################################################
+# kagenti-deps
+####################################################################
+gatewayApi:
+  enabled: true
+
+certManager:
+  enabled: true
+
+tekton:
+  enabled: true
+
+shipwright:
+  enabled: true
+
+kiali:
+  enabled: true
+
+charts:
+  ####################################################################
+  # kagenti-deps
+  ####################################################################
+  kagenti-deps:
+    enabled: true
+    values:
+      openshift: false
+      components:
+        keycloak:
+          enabled: true
+        otel:
+          enabled: true
+        phoenix:
+          enabled: false
+        mlflow:
+          enabled: false  # Disabled for Kind - requires full OTEL instrumentation
+        mcpInspector:
+          enabled: true
+        metricsServer:
+          enabled: true
+        containerRegistry:
+          enabled: true
+        ingressGateway:
+          enabled: true
+        kiali:
+          enabled: true
+        spire:
+          enabled: true
+
+  ####################################################################
+  # kagenti
+  ####################################################################
+  kagenti:
+    enabled: true
+    values:
+      openshift: false
+      components:
+        agentNamespaces:
+          enabled: true
+        platformOperator:
+          enabled: true
+        kagentiOperator:
+          enabled: false  # Disabled to avoid ConfigMap collision with platformOperator
+        ui:
+          enabled: true
+        # additional artifacts required by MCP gateway
+        mcpGateway:
+          enabled: true
+        phoenix:
+          enabled: false
+      # configs
+      ui:
+        auth:
+          enabled: true
+      # Disable MLflow auth job since MLflow component is disabled in kagenti-deps
+      mlflow:
+        auth:
+          enabled: false
+
+  ####################################################################
+  # istio  - required for the ingress gateway
+  ####################################################################
+  istio:
+    enabled: true
+
+  ####################################################################
+  # mcp-gateway
+  ####################################################################
+  mcpGateway:
+    enabled: true
+
+  ####################################################################
+  # spire
+  ####################################################################
+  spire:
+    enabled: true
+
+kind_images_preload: false
+# docker or podman
+container_engine: docker
+
+####################################################################
+# RHOAI (Red Hat OpenShift AI)
+####################################################################
+rhoai:
+  enabled: false

@@ -125,6 +125,7 @@ celerybeat.pid
 
 # Environments
 .env
+.env.*
 .venv
 env/
 venv/
@@ -164,3 +165,30 @@ cython_debug/
 #.idea/
 
 **/.DS_Store
+
+.vscode
+
+.secrets.yaml
+.secret_values.yaml
+
+*.tgz
+
+.values_override.yaml
+
+############## Node and React
+
+node_modules/
+.bin/
+
+# HyperShift CI credentials (covered by .env.* above)
+.env.kagenti-*
+.env.hypershift-ci
+
+# Git worktrees for parallel development
+.worktrees/
+test-results/
+
+# TUI binary
+kagenti/tui/bin/
+# Orchestration target repos (cloned, not committed)
+.repos/

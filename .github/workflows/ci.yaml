@@ -5,9 +5,14 @@ on:
   pull_request:
     branches: [ "main" ]
 
+# Explicit permissions - principle of least privilege
+permissions:
+  contents: read
+
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     strategy:
       matrix:
@@ -15,31 +20,100 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
 
-      # Sets up a specific version of Python
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
         with:
           python-version: ${{ matrix.python-version }}
 
-      # Installs dependencies
-      # It's a good practice to cache dependencies to speed up subsequent runs
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 pytest
+          pip install ruff pytest pre-commit uv
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      # Lints with flake8
-      # This step checks for style issues in the code
-      - name: Lint with flake8
+      - name: Lint with ruff
         run: |
-          # stop the build if there are Python syntax errors or undefined names
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          # Rule selection is in pyproject.toml [tool.ruff.lint]
+          ruff check .
+          ruff format --check .
 
-      # - name: Test with pytest
-      #   run: |
-      #     pytest
+      - name: Run pre-commit hooks
+        run: |
+          echo "Running pre-commit hooks..."
+          pre-commit run --all-files --verbose || {
+            echo "Pre-commit hooks failed!"
+            echo ""
+            echo "Files modified by hooks:"
+            git diff --name-only
+            echo ""
+            echo "Detailed changes:"
+            git diff --stat
+            exit 1
+          }
+
+      # Note: E2E tests are run in the e2e-kind.yaml and e2e-hypershift.yaml
+      # workflows which have full Kubernetes clusters with Kagenti deployed
+
+  backend-tests:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: kagenti/backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv sync --frozen --extra dev
+
+      - name: Run backend unit tests with coverage
+        run: |
+          uv run pytest --cov --cov-report=term-missing --cov-report=xml:coverage.xml -v \
+            --ignore=tests/test_migration.py
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        with:
+          name: backend-coverage
+          path: kagenti/backend/coverage.xml
+          retention-days: 30
+
+  tui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: kagenti/tui
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5  # v5
+        with:
+          go-version-file: kagenti/tui/go.mod
+          cache-dependency-path: kagenti/tui/go.sum
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run tests
+        run: go test ./... -v
+
+      - name: Build
+        run: go build ./...

@@ -1,77 +1,184 @@
 
-![Kagenti](banner.png)
+# Kagenti
 
-**Kagenti** is a Cloud-native middleware providing a *framework-neutral*, *scalable* and *secure* platform for deploying and orchestrating AI agents through a standardized REST API. It includes key services such as:
+[![CI](https://github.com/kagenti/kagenti/actions/workflows/ci.yaml/badge.svg)](https://github.com/kagenti/kagenti/actions/workflows/ci.yaml)
+[![E2E K8s 1.35.0 (Kind)](https://github.com/kagenti/kagenti/actions/workflows/e2e-kind.yaml/badge.svg)](https://github.com/kagenti/kagenti/actions/workflows/e2e-kind.yaml)
+[![E2E OCP 4.20.11 (HyperShift)](https://github.com/kagenti/kagenti/actions/workflows/e2e-hypershift.yaml/badge.svg)](https://github.com/kagenti/kagenti/actions/workflows/e2e-hypershift.yaml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/kagenti/kagenti/badge)](https://scorecard.dev/viewer/?uri=github.com/kagenti/kagenti)
+[![GitHub Release](https://img.shields.io/github/v/release/kagenti/kagenti)](https://github.com/kagenti/kagenti/releases/latest)
+[![License](https://img.shields.io/github/license/kagenti/kagenti)](LICENSE)
+[![Discord](https://img.shields.io/badge/Discord-Join%20us-5865F2?logo=discord&logoColor=white)](https://discord.gg/aJ92dNDzqB)
 
-- Authentication and Authorization
-- Trusted identity
-- Deployment
-- Configuration
-- Scaling
-- Fault-tolerance
-- Checkpointing
-- Discovery of agents and tools
-- Persistence
+**Kagenti** is a cloud-native middleware providing a *framework-neutral*, *scalable*, and *secure* platform for deploying and orchestrating AI agents through standardized agent communication protocols (A2A, MCP).
 
-## Value Proposition
+| Included Services: |  |
+|--------------------|--------|
+| - Zero-Trust Security Architecture<br>- Authentication and Authorization<br>- Trusted workload identity (SPIRE)<br>- Deployment and Configuration<br>- Scaling and Fault-tolerance<br>- Discovery of agents and tools<br>- State Persistence | <img src="banner.png" width="400"/> |
 
-Despite the extensive variety of frameworks available for developing agent-based applications, there is a distinct lack of standardized methods for deploying and operating agent code in production environments, as well as for exposing it through a standardized API. Agents are adept at reasoning, planning, and interacting with various tools, but their full potential can be limited by these deployment challenges. **Kagenti** addresses this gap by enhancing existing agent frameworks with the following key components:
+## Why Kagenti?
 
-- **Kubernetes Platform Operator**: Facilitates the deployment and configuration of agents along with infrastructure dependencies on Kubernetes. It enables scaling and updating configurations seamlessly.
+Despite the extensive variety of frameworks available for developing agent-based applications (LangGraph, CrewAI, AG2, etc.), there is a distinct lack of standardized methods for deploying and operating agent code in production environments. Agents are adept at reasoning, planning, and interacting with tools, but their full potential is often limited by:
 
-- **Agent and Tool Authorization Pattern**: This pattern replaces static credentials with dynamic SPIRE-managed identities, enforcing least privilege and continuous authentication. Secure token exchanges ensure end-to-end security principles enforcement across agentic workflows.
+- **Deployment Complexity** - Each framework requires custom deployment scripts and infrastructure
+- **Security Gaps** - No standardized approach to authentication, authorization, and workload identity
+- **Protocol Fragmentation** - Agents and tools use different communication patterns
+- **Operational Overhead** - Scaling, monitoring, and lifecycle management require custom solutions
 
-## Multi-Framework Agents
+Kagenti addresses these challenges by enhancing existing agent frameworks with production-ready, framework-neutral infrastructure.
 
-In the open-source community, several frameworks are emerging for developing agent-based applications. These include **LangGraph**, **CrewAI**, **AG2**, **Llama Stack**, and **BeeAI**. The selection of a specific framework is often driven by the use case requirements. For scenarios requiring complex orchestration with a high degree of control over the agent workflow, frameworks like LangGraph are usually a better fit. They allow explicit graph creation where nodes perform LLM model inference and tool calls, with routing that can be either predefined or dynamically influenced by LLM decisions. On the other hand, frameworks such as CrewAI are designed to assign roles and tasks to agents, enabling them to autonomously work towards achieving predefined goals. Llama Stack agents are primarily pre-built state machines focused on ReAct-style patterns. Users configure the system’s prompts, tools, models, and then simply input data and prompts, allowing the agent to execute without the need for backend code development.
+## Supported AI Use‑Case Types
+Kagenti is designed to support a broad range of AI‑agent deployment patterns, including knowledge services, synchronous and asynchronous user‑authorized assistants, continuous monitoring agents, and event‑driven workflows.
 
-**Kagenti** provides a unified platform to deploy, scale, configure, and orchestrate agents created across these various frameworks by supporting APIs based on emerging standards such as  [A2A](https://google.github.io/A2A/#/documentation).
+See the full list and definitions in the **[Kagenti Use Cases](./docs/use-case-types.md)** document.
 
-## Kubernetes Operator
+## Architecture
 
-Deploying agents in production involves addressing typical challenges associated with managing complex microservices-based applications, including managing infrastructure services such as key-value store databases, caches, queuing systems and deployment, configuration management and scaling of API servers, and workers. The Kubernetes operator facilitates the deployment of new framework instances, supports the registration and scaling of multi-framework agents, and assists in setting up and configuring identity management and agents' authorizations.
+The goal of Kagenti is to provide a pluggable agentic platform blueprint. Key functionalities are currently organized into four key pillars:
+1. Lifecycle Orchestration
+2. Networking
+3. Security
+4. Observability
 
-## Agent and Tool Authorization Pattern
+Under each of these pillars are logical components that support the workload runtime.
 
-The Agent and Tool Authorization Pattern for the Agentic Platform ensures that both human and machine identities are continuously authenticated and authorized, minimizing implicit trust at every stage of interaction. Traditional static credentials, such as API keys or client secrets, risk privilege escalation and credential leaks, and therefore are replaced with dynamic, short-lived identity-based tokens, managed through SPIRE and integrated with Keycloak for access control.
+```
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                                    KAGENTI PLATFORM                                 │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                     │
+│  ┌───────────────────────────────────────────────────────────────────────────────┐  │
+│  │                              KAGENTI UI*                                      │  │
+│  │      (Dashboard: Deploy, Test, Monitor Agents & Tools + Backend API)          │  │
+│  └───────────────────────────────────────────────────────────────────────────────┘  │
+│                                        │                                            │
+│                                        ▼                                            │
+│  ┌───────────────────────────────────────────────────────────────────────────────┐  │
+│  │                          WORKLOAD RUNTIME                                     │  │
+│  │      ┌─────────────────────────────┐    ┌─────────────────────────────┐       │  │
+│  │      │          AGENTS             │    │           TOOLS             │       │  │
+│  │      │  (A2A - LangGraph, CrewAI   │    │   (MCP Protocol Servers)    │       │  │
+│  │      │   Marvin, Autogen, etc.)    │    │                             │       │  │
+│  │      └─────────────────────────────┘    └─────────────────────────────┘       │  │
+│  └───────────────────────────────────────────────────────────────────────────────┘  │
+│                                        │                                            │
+├────────────────────────────────────────┼────────────────────────────────────────────┤
+│                                PLATFORM PILLARS                                     │
+│                                        │                                            │
+│  ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐ ┌────────────────┐  │
+│  │    LIFECYCLE     │ │    NETWORKING    │ │     SECURITY     │ │  OBSERVABILITY │  │
+│  │  ORCHESTRATION   │ │                  │ │                  │ │                │  │
+│  ├──────────────────┤ ├──────────────────┤ ├──────────────────┤ ├────────────────┤  │
+│  │                  │ │                  │ │                  │ │                │  │
+│  │   Agents/Tools   │ │   Tool Routing   │ │  Identity & Auth │ │    Tracing     │  │
+│  │   Lifecycle &    │ │    & Policy      │ │   (AuthBridge*)  │ │(MLflow,Langflow│  │
+│  │   Discovery      │ │  (MCP Gateway)   │ │                  │ │ Phoenix)       │  │
+│  │ (k8s workloads,  │ │                  │ │                  │ │                │  │
+│  │ labels,          │ ├──────────────────┤ ├──────────────────┤ ├────────────────┤  │
+│  │  AgentCard CRD*) │ │                  │ │                  │ │                │  │
+│  │                  │ │  Service Mesh    │ │    OAuth/OIDC    │ │   Network      │  │
+│  │                  │ │ (Istio/Ambient)  │ │    (Keycloak)    │ │ Visualization  │  │
+│  │                  │ │                  │ │                  │ │   (Kiali)      │  │
+│  │   Container      │ ├──────────────────┤ ├──────────────────┤ │                │  │
+│  │     Builds       │ │                  │ │                  │ │                │  │
+│  │  (Shipwright)    │ │ Ingress/Routing  │ │ Workload Identity│ │                │  │
+│  │                  │ │ (Gateway API)    │ │ (SPIFFE/SPIRE)   │ │                │  │
+│  │                  │ │                  │ │                  │ │                │  │
+│  └──────────────────┘ └──────────────────┘ └──────────────────┘ └────────────────┘  │
+│                                                                                     │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│                               KUBERNETES / OPENSHIFT                                │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+* = Built by Kagenti
+```
 
-This approach enforces least privilege access by ensuring that identities — whether users, tools, or external services — only receive the minimum permissions necessary. The authentication and authorization flow follows a structured token exchange mechanism, where a user's identity propagates securely through the system, from initial authentication to tool interactions and external service access. By leveraging SPIFFE/SPIRE for workload identity and OAuth2 transaction tokens for controlled delegation, the platform prevents credential misuse, reduces attack surfaces, and ensures real-time policy enforcement.
+## Core Components
 
-In practice, the Authorization Pattern within the Agentic Platform enables:
+Kagenti provides a set of components and assets that make it easier to manage AI agents and tools and integrate their fine-grained authorization into modern cloud-native environments.
 
-- Machine Identity Management – replacing static credentials with SPIRE-issued JWTs.
-- Secure Delegation – enforcing token exchange to propagate identity across services without excessive permissions.
-- Continuous Verification – ensuring authentication and authorization at each step, preventing privilege escalation.
+| Component | Description |
+|-----------|-------------|
+| **[Kagenti UI](./kagenti/ui-v2/)** | Dashboard for deploying agents/tools as Kubernetes Deployments, interactive testing, and monitoring |
+| **[Identity & Auth Bridge](./docs/identity-guide.md)** | Identity pattern assets that capture common authorization scenarios and provide reusable building blocks for implementing consistent authorization across services |
+| **[Agent Lifecycle Operator](https://github.com/kagenti/kagenti-extensions/tree/main/kagenti-webhook)** | Kubernetes admission webhook for building agents from source, managing lifecycle, and coordinating platform services |
+| **[MCP Gateway](https://github.com/Kuadrant/mcp-gateway/blob/main/README.md)** | Unified gateway for Model Context Protocol (MCP) servers and tools. It acts as the entry point for policy enforcement, handling requests and routing them through the appropriate authorization patterns |
+| **[Plugins adapter](https://github.com/kagenti/plugins-adapter)** | Adapter for security and safety plugins for Envoy-based gateways |
 
-This end-to-end approach aligns agentic workflows with security best practice principles, making them secure, scalable, and eventually production-ready.
+## Quick Start
 
-## Components
+### Prerequisites
 
-To achieve the objectives outlined above, we are developing this technology through a series of demos, each targeting specific aspects of our goals. Our aim is to refine these demos into an initial **Minimum Viable Product (MVP)** architecture.
+- Python ≥3.9 with [uv](https://docs.astral.sh/uv/getting-started/installation) installed
+- Docker Desktop, Rancher Desktop, or Podman (16GB RAM, 4 cores recommended)
+- [Kind](https://kind.sigs.k8s.io), [kubectl](https://kubernetes.io/docs/tasks/tools/), [Helm](https://helm.sh/docs/intro/install/)
+- [Ollama](https://ollama.com/download) for local LLM inference
 
-These demos are built on the following core technologies:
+### Install
 
-- Cloud-native infrastructure including [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io), [Istio Ambient Mesh](https://istio.io/latest/docs/ambient/), and [Kiali](https://kiali.io).
-- [Kagenti Operator](https://github.com/kagenti/kagenti-operator/tree/main/platform-operator): an operator for building agents and tools from source, managing their lifecycle, and coordinating platform components.
-- Tool-side communication via [Model Context Protocol (MCP)](https://modelcontextprotocol.io)
-- Agent-side communication via [A2A](https://google.github.io/A2A)
+```bash
+# Clone the repository
+git clone https://github.com/kagenti/kagenti.git
+cd kagenti
 
----
+# Copy and configure secrets
+cp deployments/envs/secret_values.yaml.example deployments/envs/.secret_values.yaml
+# Edit deployments/envs/.secret_values.yaml with your values
 
-### Try our demo
+# Run the Ansible-based installer
+deployments/ansible/run-install.sh --env dev
+```
 
-We provide a quick way to deploy various relevant open source technologies to set up an agentic platform on your local cluster. This demonstrates how agents, tools, and protocols interoperate to fulfill end-to-end application flows in cloud-native environments.
+Use `deployments/ansible/run-install.sh --help` for options. For more detailed installation instructions including OpenShift refer to [Installation Guide](./docs/install.md).
 
-See the **[Demo Documentation](./docs/demos.md)** for deploying a Cloud-Native Agent Platform with A2A Multi-Framework Agents.
+### Access the UI
 
-## Blogs
+```bash
+# Show service URLs and credentials
+.github/scripts/local-setup/show-services.sh
 
-We regularly publish articles at the intersection of cloud-native architecture, AI agents, and platform security.
+open http://kagenti-ui.localtest.me:8080
+# Login with credentials from show-services.sh output (default: admin / admin)
+```
 
-Some recent posts include:
+From the UI you can:
+- Import and deploy A2A agents from any framework
+- Deploy MCP tools directly from source
+- Test agents interactively
+- Monitor traces and network traffic
 
-- [Toward a Cloud-Native Platform for AI Agents](https://medium.com/kagenti-the-agentic-platform/toward-a-cloud-native-platform-for-ai-agents-70081f15316d)
-- [Security in and around MCP](https://medium.com/kagenti-the-agentic-platform/security-in-and-around-mcp-part-1-oauth-in-mcp-3f15fed0dd6e)
-- [Identity in Agentic Platforms: Enabling Secure, Least-Privilege Access](https://medium.com/kagenti-the-agentic-platform/identity-in-agentic-platforms-enabling-secure-least-privilege-access-996527f1c983)
+## Documentation
 
-Explore more on our [Kagenti Medium publication](https://medium.com/kagenti-the-agentic-platform).
+| Topic | Link |
+|-------|------|
+| **Installation** | [Installation Guide](./docs/install.md) (Kind & OpenShift) |
+| **Components** | [Component Details](./docs/components.md) |
+| **Demos & Tutorials** | [Demo Documentation](./docs/demos/README.md) |
+| **Import Your Own Agent** | [New Agent Guide](./docs/new-agent.md) |
+| **Import Your Own Tool** | [New Tool Guide](./docs/new-tool.md) |
+| **Architecture Details** | [Technical Details](./docs/tech-details.md) |
+| **Identity, Security, and Auth Bridge** | [Identity and Auth Bridge](./docs/identity-guide.md) |
+| **Developer Guide** | [Contributing](./docs/dev-guide.md) |
+| **Troubleshooting** | [Troubleshooting Guide](./docs/troubleshooting.md) |
+| **Blog Posts** | [Kagenti Blog](./docs/blogs.md) |
+
+## Supported Protocols
+
+- **[A2A (Agent-to-Agent)](https://google.github.io/A2A)** — Standard protocol for agent communication
+- **[MCP (Model Context Protocol)](https://modelcontextprotocol.io)** — Protocol for tool/server integration
+
+## Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+
+## Contact
+
+To reach the maintainer team, email **kagenti-maintainers@googlegroups.com** or join us on [Discord](https://discord.gg/aJ92dNDzqB).
+
+## License
+
+[Apache 2.0](./LICENSE)
+
+## QR Code for Kagenti.io
+
+This QR Code links to <http://kagenti.io>
+
+![Kagenti.io QR Code](./docs/images/Kagenti.QRcode.png)
